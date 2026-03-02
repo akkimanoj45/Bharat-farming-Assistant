@@ -7,12 +7,10 @@ from flask import Flask, request, jsonify, render_template_string, session
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "bharat-farming-secret-2024")
 
-
-GROQ_API_KEY = os.environ.get("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", "")
-OPENWEATHER_API_KEY = os.environ.get("2b46ee663df58c9c5289e6a614005e10", "")
-PLANT_ID_API_KEY = os.environ.get("br5ST4mufFHuAo6Il7SHONAUfbvtGaLhyXY1xZgVmYdyWjenSN", "")
-DATA_GOV_API_KEY = os.environ.get("579b464db66ec23bdd00000161d7e9b7b5dc4cb45006f93ed3bc01f2", "")
-
+GROQ_API_KEY = ("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")
+OPENWEATHER_API_KEY = ("7419ce10c86fa8e5ce93ac963a7e09c2")
+PLANT_ID_API_KEY = ("br5ST4mufFHuAo6Il7SHONAUfbvtGaLhyXY1xZgVmYdyWjenSN")
+DATA_GOV_API_KEY = ("579b464db66ec23bdd00000161d7e9b7b5dc4cb45006f93ed3bc01f2")
 
 GOVERNMENT_SCHEMES = [
     {
@@ -148,11 +146,8 @@ HTML_TEMPLATE = """
         body {
             font-family: 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #0a1a0a 0%, #1a2a0a 50%, #0a1a0a 100%);
-            background-image:
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M50 10 Q55 30 50 50 Q45 70 50 90' stroke='%23ffffff08' fill='none' stroke-width='1'/%3E%3Cpath d='M30 20 Q35 40 30 60 Q25 80 30 90' stroke='%23ffffff05' fill='none' stroke-width='1'/%3E%3Cpath d='M70 20 Q75 40 70 60 Q65 80 70 90' stroke='%23ffffff05' fill='none' stroke-width='1'/%3E%3C/svg%3E"),
-                linear-gradient(135deg, #0a1a0a 0%, #1a2a0a 50%, #0a1a0a 100%);
-            min-height: 100vh;
-            color: var(--text-light);
+             background:url('https://images.unsplash.com/photo-1500382017468-9049fed747ef') no-repeat center center;
+            
             display: flex;
         }
 
@@ -1317,11 +1312,11 @@ async function sendChat() {
         const lang = document.getElementById('chat-lang').value;
         chatHistory.push({role: 'user', content: msg});
         const data = await apiCall('/api/chat', {message: msg, history: chatHistory, language: lang});
-        typing.remove(); // Remove "Thinking..." message
+
         if (data.error) {
-            appendMsg('❌ ' + data.error, 'ai');
+            typing.textContent = '❌ ' + data.error;
         } else {
-            appendMsg(data.reply, 'ai');
+            typing.textContent = data.reply;
             chatHistory.push({role: 'assistant', content: data.reply});
             if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
             if (ttsEnabled) speak(data.reply);
@@ -1750,23 +1745,20 @@ async function calcExpense() {
         else if (profit < 0) statusEl.innerHTML = '<span class="badge badge-red">❌ Loss of ₹' + Math.abs(profit).toLocaleString('en-IN') + '</span>';
         else statusEl.innerHTML = '<span class="badge badge-yellow">⚖️ Break Even</span>';
 
-    const items = data.items.filter(i => i.val > 0);
-    if (totalExp > 0 && items.length > 0) {
-        document.getElementById('exp-breakdown').innerHTML = items.map(i => {
-            const percentage = Math.round(i.val/totalExp*100);
-            return `
+        const items = data.items.filter(i => i.val > 0);
+        if (totalExp > 0 && items.length > 0) {
+            document.getElementById('exp-breakdown').innerHTML = items.map(i => `
                 <div style="margin-bottom:8px;">
                     <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-muted);">
-                        <span>${i.label}</span><span>₹${i.val.toLocaleString('en-IN')} (${percentage}%)</span>
+                        <span>${i.label}</span><span>₹${i.val.toLocaleString('en-IN')} (${Math.round(i.val/totalExp*100)}%)</span>
                     </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:${percentage}%"></div></div>
-                </div>`;
-        }).join('');
+                    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(i.val/totalExp*100)}%"></div></div>
+                </div>`).join('');
+        }
+        document.getElementById('expense-result').style.display = 'block';
+    } catch(e) {
+        alert('Error calculating expenses. Please try again.');
     }
-    document.getElementById('expense-result').style.display = 'block';
-} catch(e) {
-    alert('Error calculating expenses. Please try again.');
-}
 }
 
 // ============================================================
@@ -1893,9 +1885,9 @@ def chat():
     lang_name = LANG_MAP.get(lang, "English")
 
     system_prompt = f"""You are Bharat Farming Assistant AI, an expert agricultural advisor for Indian farmers.
-    You help with crops, diseases, weather, irrigation, fertilizers, government schemes, and market prices.
-    Always respond in {lang_name}. Keep responses concise, practical, and farmer-friendly.
-    Focus on Indian farming context, crops, and conditions."""
+You help with crops, diseases, weather, irrigation, fertilizers, government schemes, and market prices.
+Always respond in {lang_name}. Keep responses concise, practical, and farmer-friendly.
+Focus on Indian farming context, crops, and conditions."""
 
     messages = [{"role": "system", "content": system_prompt}] + history[-10:] + [{"role": "user", "content": message}]
     reply, error = call_groq(messages, max_tokens=600)
@@ -1940,12 +1932,12 @@ def disease():
         confidence = top.get("probability", 0)
 
         prompt = f"""A crop disease has been detected: {disease_name} (confidence: {round(confidence * 100)}%).
-    Provide treatment advice for Indian farmers in {lang_name}:
-    1. Immediate action to take
-    2. Fungicide/pesticide recommendations (include brand names available in India)
-    3. Organic/natural treatment options
-    4. Prevention for next season
-    Keep it practical and brief."""
+Provide treatment advice for Indian farmers in {lang_name}:
+1. Immediate action to take
+2. Fungicide/pesticide recommendations (include brand names available in India)
+3. Organic/natural treatment options
+4. Prevention for next season
+Keep it practical and brief."""
 
         treatment, err = call_groq([{"role": "user", "content": prompt}], max_tokens=500)
         if err:
@@ -2001,21 +1993,21 @@ def irrigation():
 
     prompt = f"""Provide smart irrigation advice for an Indian farmer in {lang_name}.
 
-    Crop: {data.get('crop')}
-    Growth Stage: {data.get('stage')}
-    Soil Type: {data.get('soil')}
-    Current Temperature: {data.get('temp', 'unknown')}°C
-    Humidity: {data.get('humidity', 'unknown')}%
-    Days Since Last Rain/Irrigation: {data.get('days_since_rain', 'unknown')} days
+Crop: {data.get('crop')}
+Growth Stage: {data.get('stage')}
+Soil Type: {data.get('soil')}
+Current Temperature: {data.get('temp', 'unknown')}°C
+Humidity: {data.get('humidity', 'unknown')}%
+Days Since Last Rain/Irrigation: {data.get('days_since_rain', 'unknown')} days
 
-    Provide:
-    1. Should irrigate today? (Yes/No with reason)
-    2. How much water (liters per acre or cm depth)?
-    3. Best time of day to irrigate
-    4. Irrigation method recommendation (drip/sprinkler/flood)
-    5. Next irrigation schedule
+Provide:
+1. Should irrigate today? (Yes/No with reason)
+2. How much water (liters per acre or cm depth)?
+3. Best time of day to irrigate
+4. Irrigation method recommendation (drip/sprinkler/flood)
+5. Next irrigation schedule
 
-    Keep advice practical, specific, and concise."""
+Keep advice practical, specific, and concise."""
 
     advice, error = call_groq([{"role": "user", "content": prompt}], max_tokens=400)
     if error:
@@ -2030,18 +2022,18 @@ def fertilizer():
 
     prompt = f"""Provide fertilizer recommendations for an Indian farmer in {lang_name}.
 
-    Crop: {data.get('crop')}
-    Growth Stage: {data.get('stage')}
-    Soil Type: {data.get('soil')}
+Crop: {data.get('crop')}
+Growth Stage: {data.get('stage')}
+Soil Type: {data.get('soil')}
 
-    Provide:
-    1. Chemical fertilizers needed (NPK ratios, doses per acre, timing)
-    2. Specific fertilizer names available in India (Urea, DAP, MOP, etc.)
-    3. Organic alternative tip (compost, vermicompost, green manure)
-    4. Application method (broadcast/drip/foliar spray)
-    5. Important warnings or deficiency signs to watch for
+Provide:
+1. Chemical fertilizers needed (NPK ratios, doses per acre, timing)
+2. Specific fertilizer names available in India (Urea, DAP, MOP, etc.)
+3. Organic alternative tip (compost, vermicompost, green manure)
+4. Application method (broadcast/drip/foliar spray)
+5. Important warnings or deficiency signs to watch for
 
-    Keep it practical and farmer-friendly."""
+Keep it practical and farmer-friendly."""
 
     rec, error = call_groq([{"role": "user", "content": prompt}], max_tokens=500)
     if error:
@@ -2095,18 +2087,18 @@ def calendar():
 
     prompt = f"""Create a detailed crop calendar for an Indian farmer in {lang_name}.
 
-    Crop: {data.get('crop')}
-    Season: {data.get('season')}
-    Region: {data.get('region', 'India')}
+Crop: {data.get('crop')}
+Season: {data.get('season')}
+Region: {data.get('region', 'India')}
 
-    Provide a month-by-month schedule covering:
-    1. Land Preparation & Sowing (dates, seed rate, spacing)
-    2. Fertilizer Schedule (what, when, how much per acre)
-    3. Irrigation Schedule (frequency and amount)
-    4. Pest & Disease Management (key monitoring periods)
-    5. Harvesting (expected time, method, yield)
+Provide a month-by-month schedule covering:
+1. Land Preparation & Sowing (dates, seed rate, spacing)
+2. Fertilizer Schedule (what, when, how much per acre)
+3. Irrigation Schedule (frequency and amount)
+4. Pest & Disease Management (key monitoring periods)
+5. Harvesting (expected time, method, yield)
 
-    Format as a clear, practical timeline."""
+Format as a clear, practical timeline."""
 
     cal, error = call_groq([{"role": "user", "content": prompt}], max_tokens=700)
     if error:
@@ -2115,4 +2107,4 @@ def calendar():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=10000)
